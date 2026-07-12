@@ -497,9 +497,24 @@ def api_stats_overview():
     )
 
     def make_series(points):
-        values = {str(point["bucket"]): point["total"] for point in points}
+        values = {}
+
+        for point in points:
+            bucket = point["bucket"]
+
+            if kind == "hour":
+                key = str(bucket)
+            else:
+                if hasattr(bucket, "strftime"):
+                    key = bucket.strftime("%Y-%m-%d")
+                else:
+                    key = str(bucket)
+
+            values[key] = point["total"]
+
         if kind == "hour":
             return [values.get(str(hour), 0) for hour in range(24)]
+
         return [values.get(label, 0) for label in labels]
 
     distribution_sql = """

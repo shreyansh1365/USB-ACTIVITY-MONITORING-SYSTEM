@@ -548,6 +548,8 @@ def api_stats_overview():
         "file_series": make_series(file_points),
         "distribution": distribution,
         "granularity": kind,
+        "debug_usb_points": usb_points,
+        "debug_file_points": file_points,
     })
 
 

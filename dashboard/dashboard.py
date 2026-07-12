@@ -31,6 +31,18 @@ except (ImportError, OSError):
 
 
 app = Flask(__name__)
+@app.route("/api/debug/time")
+def debug_time():
+    db_time = query(
+        "SELECT NOW() AS db_now, CURDATE() AS db_date",
+        fetchone=True,
+    )
+
+    return jsonify({
+        "python_now": str(datetime.now()),
+        "db_now": str(db_time["db_now"]),
+        "db_date": str(db_time["db_date"]),
+    })
 
 
 def get_connection():

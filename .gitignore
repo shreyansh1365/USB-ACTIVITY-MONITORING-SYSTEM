@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+venv/
+.venv/
+logs/
+*.log
+.pytest_cache/
+package/
+chart.js-4.4.4.tgz

@@ -8,8 +8,9 @@ def get_connection():
     """
 
     return mysql.connector.connect(
-        host=DB_CONFIG["host"],
-        user=DB_CONFIG["user"],
-        password=DB_CONFIG["password"],
-        database=DB_CONFIG["database"]
-    )
+    host=DB_CONFIG["host"],
+    port=DB_CONFIG["port"],
+    user=DB_CONFIG["user"],
+    password=DB_CONFIG["password"],
+    database=DB_CONFIG["database"]
+)

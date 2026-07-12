@@ -456,25 +456,35 @@ def api_sha256():
 
 
 def stats_window(period):
-    now = query(
-        "SELECT CURDATE() AS today",
-    fetchone=True,
-    )["today"]
-
-    if hasattr(now, "date"):
-        now = now.date()
     if period == "today":
         labels = [f"{hour:02d}:00" for hour in range(24)]
         return labels, "HOUR(event_time)", "DATE(event_time) = CURDATE()", "hour"
+
     days = 30 if period in {"month", "all"} else 7
+
+    latest_date = query(
+        """
+        SELECT GREATEST(
+            COALESCE((SELECT MAX(DATE(event_time)) FROM usb_logs), '1970-01-01'),
+            COALESCE((SELECT MAX(DATE(event_time)) FROM transfer_logs), '1970-01-01')
+        ) AS latest_date
+        """,
+        fetchone=True,
+    )["latest_date"]
+
     labels = [
-        query(
-            f"SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL {offset} DAY), '%Y-%m-%d') AS label",
-            fetchone=True,
-        )["label"]
+        (latest_date - timedelta(days=offset)).isoformat()
         for offset in range(days - 1, -1, -1)
     ]
-    return labels, "DATE_FORMAT(event_time, '%Y-%m-%d')", f"event_time >= DATE_SUB(CURDATE(), INTERVAL {days - 1} DAY)", "date"
+
+    latest_date_str = latest_date.isoformat()
+
+    return (
+        labels,
+        "DATE_FORMAT(event_time, '%Y-%m-%d')",
+        f"DATE(event_time) BETWEEN DATE_SUB('{latest_date_str}', INTERVAL {days - 1} DAY) AND '{latest_date_str}'",
+        "date",
+    )
 
 
 @app.route("/api/stats/overview")
@@ -529,10 +539,7 @@ def api_stats_overview():
             if kind == "hour":
                 key = str(bucket)
             else:
-                if hasattr(bucket, "strftime"):
-                    key = bucket.strftime("%Y-%m-%d")
-                else:
-                    key = str(bucket)
+                key = bucket.strftime("%Y-%m-%d") if hasattr(bucket, "strftime") else str(bucket)
 
             values[key] = point["total"]
 

@@ -456,12 +456,18 @@ def api_sha256():
 
 
 def stats_window(period):
-    now = datetime.now()
+    now = query(
+        "SELECT CURDATE() AS today",
+    fetchone=True,
+    )["today"]
+
+    if hasattr(now, "date"):
+        now = now.date()
     if period == "today":
         labels = [f"{hour:02d}:00" for hour in range(24)]
         return labels, "HOUR(event_time)", "DATE(event_time) = CURDATE()", "hour"
     days = 30 if period in {"month", "all"} else 7
-    labels = [(now.date() - timedelta(days=offset)).isoformat() for offset in range(days - 1, -1, -1)]
+    labels = [(now - timedelta(days=offset)).isoformat() for offset in range(days - 1, -1, -1)]
     return labels, "DATE(event_time)", f"event_time >= DATE_SUB(CURDATE(), INTERVAL {days - 1} DAY)", "date"
 
 

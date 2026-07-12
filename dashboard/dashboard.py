@@ -468,7 +468,7 @@ def stats_window(period):
         return labels, "HOUR(event_time)", "DATE(event_time) = CURDATE()", "hour"
     days = 30 if period in {"month", "all"} else 7
     labels = [(now - timedelta(days=offset)).isoformat() for offset in range(days - 1, -1, -1)]
-    return labels, "DATE(event_time)", f"event_time >= DATE_SUB(CURDATE(), INTERVAL {days - 1} DAY)", "date"
+    return labels, "DATE_FORMAT(event_time, '%Y-%m-%d')", f"event_time >= DATE_SUB(CURDATE(), INTERVAL {days - 1} DAY)", "date"
 
 
 @app.route("/api/stats/overview")

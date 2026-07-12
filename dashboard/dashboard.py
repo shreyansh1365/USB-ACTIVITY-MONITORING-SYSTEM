@@ -471,6 +471,8 @@ def stats_window(period):
         """,
         fetchone=True,
     )["latest_date"]
+    if isinstance(latest_date, str):
+        latest_date = datetime.strptime(latest_date, "%Y-%m-%d").date()
 
     labels = [
         (latest_date - timedelta(days=offset)).isoformat()

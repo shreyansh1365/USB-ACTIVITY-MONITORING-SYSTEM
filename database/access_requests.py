@@ -49,7 +49,7 @@ def create_access_request(
 def pending_requests():
 
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     cursor.execute(
         """
@@ -71,7 +71,7 @@ def pending_requests():
 def get_request_by_id(request_id):
 
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     cursor.execute(
         """
@@ -127,7 +127,7 @@ def finalize_request(request_id, status, approved_by=None, approved_until=None, 
         UPDATE usb_access_requests
         SET status=%s,
             approved_by=%s,
-            approval_time=NOW(),
+            approval_time=CURRENT_TIMESTAMP,
             approved_until=%s,
             remarks=%s
         WHERE id=%s
@@ -146,7 +146,7 @@ def get_latest_approved_request(device_code):
     approved_until when checking whether a temporary grant has expired."""
 
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     cursor.execute(
         """

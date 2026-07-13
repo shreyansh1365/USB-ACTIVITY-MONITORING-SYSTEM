@@ -2,13 +2,16 @@
 
 import csv
 import io
+import os
 import re
 import zipfile
 from datetime import datetime, timedelta
 from html import escape as xml_escape
 
+import psycopg2
+from psycopg2.extras import RealDictCursor
+
 from flask import Flask, Response, jsonify, render_template, request
-import mysql.connector
 
 from config import DB_CONFIG
 from database.access_requests import (
@@ -34,7 +37,7 @@ app = Flask(__name__)
 @app.route("/api/debug/time")
 def debug_time():
     db_time = query(
-        "SELECT NOW() AS db_now, CURDATE() AS db_date",
+        "SELECT NOW() AS db_now, CURRENT_DATE AS db_date",
         fetchone=True,
     )
 
@@ -46,18 +49,15 @@ def debug_time():
 
 
 def get_connection():
-    return mysql.connector.connect(
-        host=DB_CONFIG["host"],
-        port=DB_CONFIG["port"],
-        user=DB_CONFIG["user"],
-        password=DB_CONFIG["password"],
-        database=DB_CONFIG["database"],
+    return psycopg2.connect(
+        os.environ["DATABASE_URL"],
+        cursor_factory=RealDictCursor
     )
 
 
 def query(sql, params=None, fetchone=False):
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     try:
         cursor.execute(sql, params or ())
         return cursor.fetchone() if fetchone else cursor.fetchall()
@@ -116,11 +116,11 @@ def add_date_filter(sql, params, field, filters):
         sql += f" AND DATE({field}) = %s"
         params.append(filters["date"])
     elif filters["period"] == "today":
-        sql += f" AND DATE({field}) = CURDATE()"
+        sql += f" AND DATE({field}) = CURRENT_DATE"
     elif filters["period"] == "7d":
-        sql += f" AND {field} >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)"
+       sql += f" AND {field} >= CURRENT_DATE - INTERVAL '6 days'"
     elif filters["period"] == "month":
-        sql += f" AND {field} >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)"
+        sql += f" AND {field} >= CURRENT_DATE - INTERVAL '29 days'"
     return sql
 
 
@@ -509,7 +509,7 @@ def api_sha256():
 def stats_window(period):
     if period == "today":
         labels = [f"{hour:02d}:00" for hour in range(24)]
-        return labels, "HOUR(event_time)", "DATE(event_time) = CURDATE()", "hour"
+        return labels, "EXTRACT(HOUR FROM event_time)", "DATE(event_time) = CURRENT_DATE", "hour"
 
     days = 30 if period in {"month", "all"} else 7
 
@@ -551,12 +551,12 @@ def api_stats_overview():
     device_params = (device_code,) if device_code else ()
 
     usb_today = query(
-        "SELECT COUNT(*) AS c FROM usb_logs WHERE DATE(event_time) = CURDATE()" + device_clause,
+        "SELECT COUNT(*) AS c FROM usb_logs WHERE DATE(event_time) = CURRENT_DATE" + device_clause,
         device_params,
         fetchone=True,
     )["c"]
     file_today = query(
-        "SELECT COUNT(*) AS c FROM transfer_logs WHERE DATE(event_time) = CURDATE()" + device_clause,
+        "SELECT COUNT(*) AS c FROM transfer_logs WHERE DATE(event_time) = CURRENT_DATE" + device_clause,
         device_params,
         fetchone=True,
     )["c"]

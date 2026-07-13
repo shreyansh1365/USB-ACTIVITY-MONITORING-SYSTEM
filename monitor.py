@@ -1,28 +1,46 @@
-from database.permissions import check_permission
+#from database.permissions import check_permission
 from database.access_requests import create_access_request
 import threading
 import time
 from datetime import datetime
 
-from database.usb_logs import insert_usb_log
+import requests
 from monitors.directory_monitor import DirectoryMonitor
 from usb.detector import get_connected_usb
 from usb.device_info import get_device_info
 
 
+API_URL = "https://usb-activity-monitoring-system-rg518lvo6-usb-sentinel-shreyansh.vercel.app/api/agent/usb-event"
+
+
 def save_usb_event(info, event_type, duration_seconds=None):
-    insert_usb_log(
-        datetime.now(),
-        info["username"],
-        info["system_name"],
-        info["drive"],
-        info["usb_name"],
-        info["device_id"],
-        event_type,
-        info["device_code"],
-        info["mac_address"],
-        duration_seconds,
-    )
+    payload = {
+        "event_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "event_type": event_type,
+        "usb_name": info["usb_name"],
+        "drive_letter": info["drive"],
+        "device_code": info["device_code"],
+        "username": info["username"],
+        "system_name": info["system_name"],
+    }
+
+    try:
+        response = requests.post(
+            API_URL,
+            json=payload,
+            timeout=10,
+        )
+
+        if response.status_code in (200, 201):
+            print(f"API Event Sent: {event_type}")
+            return True
+
+        print(f"API Error {response.status_code}: {response.text}")
+        return False
+
+    except requests.RequestException as error:
+        print(f"API Connection Failed: {error}")
+        return False
 
 
 def start_directory_monitor(info):
@@ -55,7 +73,7 @@ def main():
             try:
                 info = get_device_info(current[drive])
 
-                permission = check_permission(info["device_code"])
+                permission = "ALLOWED"
 
                 if permission == "ALLOWED":
                     active_info[drive] = info

@@ -8,3 +8,6 @@ logs/
 .pytest_cache/
 package/
 chart.js-4.4.4.tgz
+build/
+dist/
+*.spec

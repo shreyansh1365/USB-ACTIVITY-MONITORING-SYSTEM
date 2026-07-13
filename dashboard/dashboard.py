@@ -271,6 +271,57 @@ def api_summary():
         "connection_label": "USB Connected" if connected else "No USB Connected",
     })
 
+@app.route("/api/agent/usb-event", methods=["POST"])
+def api_agent_usb_event():
+    data = request.get_json(silent=True) or {}
+
+    required = [
+        "event_time",
+        "event_type",
+        "usb_name",
+        "drive_letter",
+        "device_code",
+        "username",
+        "system_name",
+    ]
+
+    missing = [field for field in required if not data.get(field)]
+    if missing:
+        return jsonify({"error": "Missing fields", "missing": missing}), 400
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            INSERT INTO usb_logs
+            (event_time, event_type, usb_name, drive_letter,
+             device_code, username, system_name)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                data["event_time"],
+                data["event_type"],
+                data["usb_name"],
+                data["drive_letter"],
+                data["device_code"],
+                data["username"],
+                data["system_name"],
+            ),
+        )
+
+        conn.commit()
+        return jsonify({"status": "success"}), 201
+
+    except Exception as error:
+        conn.rollback()
+        return jsonify({"error": str(error)}), 500
+
+    finally:
+        cursor.close()
+        conn.close()
+
 
 @app.route("/api/usb_events")
 def api_usb_events():
